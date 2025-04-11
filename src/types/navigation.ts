@@ -4,4 +4,6 @@ export type RootStackParamList = {
     imageUri: string;
   };
   History: undefined;
+  Auth: undefined;
+  Account: undefined;
 };

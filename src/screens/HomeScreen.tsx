@@ -1,23 +1,34 @@
-import React, { useState } from 'react';
-import { View, StyleSheet } from 'react-native';
-import { Button, FAB } from 'react-native-paper';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { Button, FAB, IconButton } from 'react-native-paper';
+import { CameraView } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
-import { Camera } from 'expo-camera';
+import { useCameraPermissions } from 'expo-camera';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../types/navigation';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
 export default function HomeScreen({ navigation }: Props) {
-  const [permission, requestPermission] = useState<boolean>(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [facing, setFacing] = useState<'front' | 'back'>('back');
+  const cameraRef = useRef<CameraView | null>(null);
+  const [permission, requestPermission] = useCameraPermissions();
 
-  const openCamera = async () => {
-    const { status } = await Camera.requestCameraPermissionsAsync();
-    if (status === 'granted') {
-      setIsCameraOpen(true);
-    }
-  };
+  useEffect(() => {
+    (async () => {
+      if (permission) {
+        if (permission.granted) {
+          setIsCameraOpen(true);
+        }
+      } else {
+        const { granted } = await requestPermission();
+        if (granted) {
+          setIsCameraOpen(true);
+        }
+      }
+    })();
+  }, [permission, requestPermission]);
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -28,7 +39,6 @@ export default function HomeScreen({ navigation }: Props) {
     });
 
     if (!result.canceled) {
-      // For now, we'll use hardcoded data
       navigation.navigate('Result', {
         imageUri: result.assets[0].uri,
       });
@@ -36,36 +46,90 @@ export default function HomeScreen({ navigation }: Props) {
   };
 
   const takePicture = async () => {
-    setIsCameraOpen(false);
-    // For now, we'll use hardcoded data
-    navigation.navigate('Result', {
-      imageUri: 'dummy-uri',
-    });
+    if (cameraRef.current) {
+      try {
+        // @ts-ignore - Temporarily ignore TypeScript error for takePictureAsync
+        const photo = await cameraRef.current.takePictureAsync();
+        if (photo && photo.uri) {
+          setIsCameraOpen(false);
+          navigation.navigate('Result', {
+            imageUri: photo.uri,
+          });
+        } else {
+          console.error('Photo capture failed or returned no URI');
+        }
+      } catch (error) {
+        console.error('Error taking picture:', error);
+      }
+    }
+  };
+
+  const toggleCameraFacing = () => {
+    setFacing(current => current === 'back' ? 'front' : 'back');
   };
 
   if (isCameraOpen) {
     return (
-      <View style={styles.camera}>
-        <View style={styles.buttonContainer}>
-          <FAB
-            icon="camera"
-            style={styles.fab}
-            onPress={takePicture}
-          />
-        </View>
+      <View style={styles.cameraContainer}>
+        <CameraView 
+          ref={cameraRef}
+          style={styles.camera} 
+          facing={facing}
+        >
+          <View style={styles.cameraControls}>
+            <IconButton
+              icon="camera-flip"
+              mode="contained"
+              containerColor="rgba(255, 255, 255, 0.8)"
+              size={30}
+              onPress={toggleCameraFacing}
+              style={styles.flipButton}
+            />
+            <FAB
+              icon="camera"
+              style={styles.captureButton}
+              onPress={takePicture}
+              size="large"
+            />
+            <IconButton
+              icon="close"
+              mode="contained"
+              containerColor="rgba(255, 255, 255, 0.8)"
+              size={30}
+              onPress={() => setIsCameraOpen(false)}
+              style={styles.closeButton}
+            />
+          </View>
+        </CameraView>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <Button mode="contained" onPress={openCamera} style={styles.button}>
+      <Button 
+        mode="contained" 
+        onPress={requestPermission} 
+        style={styles.button}
+        icon="camera"
+        disabled={!permission || !permission.granted}
+      >
         Take Photo
       </Button>
-      <Button mode="outlined" onPress={pickImage} style={styles.button}>
+      <Button 
+        mode="outlined" 
+        onPress={pickImage} 
+        style={styles.button}
+        icon="image"
+      >
         Choose from Gallery
       </Button>
-      <Button mode="text" onPress={() => navigation.navigate('History')} style={styles.button}>
+      <Button 
+        mode="text" 
+        onPress={() => navigation.navigate('History')} 
+        style={styles.button}
+        icon="history"
+      >
         View History
       </Button>
     </View>
@@ -81,18 +145,31 @@ const styles = StyleSheet.create({
   button: {
     marginVertical: 10,
   },
+  cameraContainer: {
+    flex: 1,
+    backgroundColor: 'black',
+  },
   camera: {
     flex: 1,
   },
-  buttonContainer: {
+  cameraControls: {
     flex: 1,
     backgroundColor: 'transparent',
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'flex-end',
-    marginBottom: 40,
+    padding: 20,
+    paddingBottom: 40,
   },
-  fab: {
-    margin: 16,
+  captureButton: {
+    alignSelf: 'center',
+    marginBottom: 20,
+    backgroundColor: '#fff',
+  },
+  flipButton: {
+    alignSelf: 'flex-end',
+  },
+  closeButton: {
+    alignSelf: 'flex-end',
   },
 });
