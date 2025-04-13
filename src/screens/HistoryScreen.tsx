@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Text, FlatList, Image } from 'react-native';
+import { View, StyleSheet, ScrollView, Text, FlatList, Image, TouchableOpacity, Modal, Pressable } from 'react-native';
 import { Card, Title, Paragraph } from 'react-native-paper';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../types/navigation';
@@ -29,6 +29,8 @@ const HistoryScreen = () => {
   const [meals, setMeals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedMeal, setSelectedMeal] = useState<any | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
   const { user } = useAuth();
 
   const fetchMeals = async () => {
@@ -69,6 +71,16 @@ const HistoryScreen = () => {
     fetchMeals();
   };
 
+  const openModal = (meal: any) => {
+    setSelectedMeal(meal);
+    setModalVisible(true);
+  };
+
+  const closeModal = () => {
+    setModalVisible(false);
+    setSelectedMeal(null);
+  };
+
   if (loading && !refreshing) {
     return (
       <View style={styles.container}>
@@ -95,7 +107,7 @@ const HistoryScreen = () => {
           data={meals}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <View style={styles.mealItem}>
+            <TouchableOpacity onPress={() => openModal(item)} style={styles.mealItem}>
               {item.image_url && (
                 <Image source={{ uri: item.image_url }} style={styles.mealImage} />
               )}
@@ -109,12 +121,50 @@ const HistoryScreen = () => {
                   </Text>
                 )}
               </View>
-            </View>
+            </TouchableOpacity>
           )}
           refreshing={refreshing}
           onRefresh={onRefresh}
         />
       )}
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={closeModal}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Meal Details</Text>
+            {selectedMeal && (
+              <>
+                {selectedMeal.image_url && (
+                  <Image source={{ uri: selectedMeal.image_url }} style={styles.modalImage} />
+                )}
+                <Text style={styles.modalDate}>{new Date(selectedMeal.created_at).toLocaleString()}</Text>
+                {selectedMeal.analysis_data && selectedMeal.analysis_data.total && (
+                  <View style={styles.nutritionContainer}>
+                    <NutritionItem label="Calories" value={selectedMeal.analysis_data.total.calories} unit="kcal" />
+                    <NutritionItem label="Protein" value={selectedMeal.analysis_data.total.protein} unit="g" />
+                    <NutritionItem label="Carbs" value={selectedMeal.analysis_data.total.carbs} unit="g" />
+                    <NutritionItem label="Fats" value={selectedMeal.analysis_data.total.fats} unit="g" />
+                    <NutritionItem label="Fiber" value={selectedMeal.analysis_data.total.fiber || 0} unit="g" />
+                    <NutritionItem label="Sugar" value={selectedMeal.analysis_data.total.sugar || 0} unit="g" />
+                    <NutritionItem label="Sodium" value={selectedMeal.analysis_data.total.sodium || 0} unit="mg" />
+                  </View>
+                )}
+                {!selectedMeal.analysis_data || !selectedMeal.analysis_data.total && (
+                  <Text style={styles.noDataText}>No nutritional data available.</Text>
+                )}
+                <Pressable onPress={closeModal} style={styles.closeButton}>
+                  <Text style={styles.closeButtonText}>Close</Text>
+                </Pressable>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -190,6 +240,55 @@ const styles = StyleSheet.create({
   mealTotal: {
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 20,
+    width: '90%',
+    maxHeight: '50%',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  modalImage: {
+    width: '100%',
+    height: 200,
+    resizeMode: 'cover',
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  modalDate: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  noDataText: {
+    fontSize: 16,
+    color: '#888',
+    textAlign: 'center',
+    marginVertical: 10,
+  },
+  closeButton: {
+    marginTop: 20,
+    padding: 10,
+    backgroundColor: '#2196F3',
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  closeButtonText: {
+    color: 'white',
+    fontSize: 16,
   },
 });
 
