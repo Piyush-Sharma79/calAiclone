@@ -25,8 +25,8 @@
       "favicon": "./assets/favicon.png"
     },
     "extra": {
-      "GOOGLE_API_KEY": "AIzaSyBrPY01GPy02fMug_OmRP9UIVmqWzvFsQ0",
-      "USDA_API_KEY": "8TOfvvZ1rsTPqEN2kUEe3pzRpaK3BuQA15rIQQ9j"
+      "GOOGLE_API_KEY": "",
+      "USDA_API_KEY": ""
     }
   }
 }
