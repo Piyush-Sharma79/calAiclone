@@ -9,6 +9,17 @@ dist/
 web-build/
 expo-env.d.ts
 
+# Environment variables and sensitive files
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+app.json
+
+# Create a template for app.json that doesn't include sensitive keys
+# Add instructions to copy app.template.json to app.json and add your own keys
+
 # Native
 *.orig.*
 *.jks
@@ -34,3 +45,9 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
