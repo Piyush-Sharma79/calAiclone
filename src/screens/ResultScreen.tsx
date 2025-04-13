@@ -1,11 +1,27 @@
-import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Image, ScrollView, Text, Alert } from 'react-native';
-import { Card, Title, Paragraph, Button, ActivityIndicator, Snackbar } from 'react-native-paper';
+import React, { useEffect, useState, useRef } from 'react';
+import { 
+  View, 
+  StyleSheet, 
+  Image, 
+  ScrollView, 
+  Text, 
+  Alert, 
+  TouchableOpacity, 
+  Dimensions,
+  Animated,
+  Platform
+} from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { Ionicons } from '@expo/vector-icons';
+import { ActivityIndicator } from 'react-native-paper';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../types/navigation';
 import { supabase } from '../utils/supabase';
 import { useAuth } from '../context/AuthContext';
 import { analyzeFoodImage } from '../utils/foodRecognition';
+import { LinearGradient } from 'expo-linear-gradient';
+
+const { width } = Dimensions.get('window');
 
 type NutritionalData = {
   calories: number;
@@ -23,6 +39,7 @@ interface NutritionItemProps {
   label: string;
   value: number;
   unit: string;
+  color?: string;
 }
 
 const ResultScreen = ({ route, navigation }: Props) => {
@@ -32,7 +49,10 @@ const ResultScreen = ({ route, navigation }: Props) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState<boolean>(false);
-  const [snackbarVisible, setSnackbarVisible] = useState<boolean>(false);
+  
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
 
   useEffect(() => {
     // Reset isSaved when imageUri changes (new image to analyze)
@@ -46,6 +66,20 @@ const ResultScreen = ({ route, navigation }: Props) => {
       try {
         const result = await analyzeFoodImage(imageUri);
         setFoodData(result);
+        
+        // Start animation when data is loaded
+        Animated.parallel([
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 600,
+            useNativeDriver: true,
+          }),
+          Animated.timing(slideAnim, {
+            toValue: 0,
+            duration: 600,
+            useNativeDriver: true,
+          }),
+        ]).start();
       } catch (err) {
         console.error('Error fetching food data:', err);
         setError('Failed to analyze image. Please try again or enter details manually.');
@@ -58,69 +92,6 @@ const ResultScreen = ({ route, navigation }: Props) => {
 
     fetchFoodData();
   }, [imageUri]);
-
-  useEffect(() => {
-    const saveMealToSupabase = async () => {
-      if (!user || !imageUri || !foodData || isSaved) return;
-
-      try {
-        const analysisData = {
-          items: [
-            {
-              name: foodData.name,
-              calories: foodData.nutritionalData?.calories || 0,
-              protein: foodData.nutritionalData?.protein || 0,
-              carbs: foodData.nutritionalData?.carbs || 0,
-              fats: foodData.nutritionalData?.fat || 0,
-            },
-          ],
-          total: {
-            calories: foodData.nutritionalData?.calories || 0,
-            protein: foodData.nutritionalData?.protein || 0,
-            carbs: foodData.nutritionalData?.carbs || 0,
-            fats: foodData.nutritionalData?.fat || 0,
-          },
-        };
-
-        const { data, error } = await supabase
-          .from('meals')
-          .insert([
-            {
-              user_id: user.id,
-              image_url: imageUri,
-              analysis_data: analysisData,
-            },
-          ]);
-
-        if (error) {
-          console.error('Error saving meal to Supabase:', error);
-          Alert.alert('Error', 'Failed to save meal data');
-        } else {
-          console.log('Meal saved to Supabase:', data);
-          setIsSaved(true);
-        }
-      } catch (err) {
-        console.error('Unexpected error saving meal:', err);
-        Alert.alert('Error', 'Unexpected error occurred');
-      }
-    };
-
-    // Do not save automatically, wait for user confirmation
-    // if (foodData) {
-    //   saveMealToSupabase();
-    // }
-  }, [imageUri, user, foodData, isSaved]);
-
-  useEffect(() => {
-    if (error) {
-      setSnackbarVisible(true);
-      const timer = setTimeout(() => {
-        setSnackbarVisible(false);
-        setError(null); // Clear error after dismissal
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [error]);
 
   const handleSaveToHistory = async () => {
     if (!user || !imageUri || !foodData) {
@@ -192,164 +163,437 @@ const ResultScreen = ({ route, navigation }: Props) => {
   if (!imageUri) {
     return (
       <ScrollView style={styles.container}>
-        <Text style={styles.title}>No image selected</Text>
-        <Text style={styles.subtitle}>Please capture a meal photo from the Home screen.</Text>
-        <Button mode="contained" onPress={() => navigation.navigate('Home')} style={styles.button}>
-          Go to Home
-        </Button>
+        <StatusBar style="dark" />
+        <View style={styles.emptyStateContainer}>
+          <Ionicons name="image-outline" size={80} color="#CCCCCC" />
+          <Text style={styles.title}>No image selected</Text>
+          <Text style={styles.subtitle}>Please capture a meal photo from the Home screen.</Text>
+          <TouchableOpacity 
+            style={styles.primaryButton}
+            onPress={() => navigation.navigate('Home')}
+          >
+            <Text style={styles.primaryButtonText}>Go to Home</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     );
   }
 
   return (
     <View style={styles.container}>
+      <StatusBar style="dark" />
+      
       {loading && (
         <View style={styles.loaderContainer}>
-          <ActivityIndicator size="large" />
+          <ActivityIndicator size="large" color="#4CAF50" />
           <Text style={styles.loadingText}>Analyzing your meal...</Text>
         </View>
       )}
-      {error && snackbarVisible && (
-        <Snackbar
-          visible={snackbarVisible}
-          onDismiss={() => setSnackbarVisible(false)}
-          style={styles.snackbar}
-          duration={3000}
-        >
-          {error}
-        </Snackbar>
+      
+      {error && (
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle" size={40} color="#E53935" />
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity 
+            style={styles.retryButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.retryButtonText}>Back to Scanning</Text>
+          </TouchableOpacity>
+        </View>
       )}
+      
       {!loading && foodData && (
-        <>
+        <ScrollView showsVerticalScrollIndicator={false}>
           {(!foodData.isFoodItem || !foodData.nutritionalData) && (
             <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>Error: This does not appear to be a recognizable food item. Please try a different image.</Text>
-              <Button mode="contained" onPress={() => navigation.goBack()} style={styles.retryButton}>
-                Back to Scanning
-              </Button>
+              <Ionicons name="alert-circle" size={40} color="#E53935" />
+              <Text style={styles.errorText}>
+                This does not appear to be a recognizable food item. Please try a different image.
+              </Text>
+              <TouchableOpacity 
+                style={styles.retryButton}
+                onPress={() => navigation.goBack()}
+              >
+                <Text style={styles.retryButtonText}>Back to Scanning</Text>
+              </TouchableOpacity>
             </View>
           )}
+          
           {foodData.isFoodItem && foodData.nutritionalData && (
-            <Card style={styles.card}>
-              <Card.Cover source={{ uri: imageUri }} />
-              <Card.Content>
-                <Title>{foodData.name}</Title>
-                <Paragraph style={styles.description}>{foodData.description}</Paragraph>
-                {foodData.nutritionalData && (
-                  <View style={styles.nutritionContainer}>
-                    <NutritionItem label="Calories" value={foodData.nutritionalData.calories} unit="kcal" />
-                    <NutritionItem label="Protein" value={foodData.nutritionalData.protein} unit="g" />
-                    <NutritionItem label="Carbs" value={foodData.nutritionalData.carbs} unit="g" />
-                    <NutritionItem label="Fats" value={foodData.nutritionalData.fat} unit="g" />
-                    {foodData.nutritionalData.fiber && <NutritionItem label="Fiber" value={foodData.nutritionalData.fiber} unit="g" />}
-                    {foodData.nutritionalData.sugar && <NutritionItem label="Sugar" value={foodData.nutritionalData.sugar} unit="g" />}
-                    {foodData.nutritionalData.sodium && <NutritionItem label="Sodium" value={foodData.nutritionalData.sodium} unit="mg" />}
+            <Animated.View
+              style={[
+                styles.resultContainer,
+                {
+                  opacity: fadeAnim,
+                  transform: [{ translateY: slideAnim }],
+                },
+              ]}
+            >
+              <View style={styles.imageContainer}>
+                <Image source={{ uri: imageUri }} style={styles.foodImage} />
+                <LinearGradient
+                  colors={['transparent', 'rgba(0,0,0,0.7)']}
+                  style={styles.imageGradient}
+                />
+                <View style={styles.foodNameContainer}>
+                  <Text style={styles.foodName}>{foodData.name}</Text>
+                </View>
+              </View>
+              
+              <View style={styles.nutritionSummary}>
+                <View style={styles.calorieContainer}>
+                  <Text style={styles.calorieValue}>
+                    {foodData.nutritionalData.calories}
+                  </Text>
+                  <Text style={styles.calorieLabel}>calories</Text>
+                </View>
+                
+                <View style={styles.macroSummary}>
+                  <View style={styles.macroItem}>
+                    <Text style={styles.macroValue}>{foodData.nutritionalData.protein}g</Text>
+                    <Text style={styles.macroLabel}>Protein</Text>
                   </View>
-                )}
-                {!foodData.nutritionalData && (
-                  <Paragraph style={styles.noDataText}>Nutritional data unavailable.</Paragraph>
-                )}
-              </Card.Content>
-            </Card>
+                  <View style={styles.macroItem}>
+                    <Text style={styles.macroValue}>{foodData.nutritionalData.carbs}g</Text>
+                    <Text style={styles.macroLabel}>Carbs</Text>
+                  </View>
+                  <View style={styles.macroItem}>
+                    <Text style={styles.macroValue}>{foodData.nutritionalData.fat}g</Text>
+                    <Text style={styles.macroLabel}>Fats</Text>
+                  </View>
+                </View>
+              </View>
+              
+              <View style={styles.descriptionContainer}>
+                <Text style={styles.descriptionTitle}>About this food</Text>
+                <Text style={styles.descriptionText}>{foodData.description}</Text>
+              </View>
+              
+              <View style={styles.nutritionDetailContainer}>
+                <Text style={styles.nutritionDetailTitle}>Nutrition Facts</Text>
+                
+                <View style={styles.nutritionList}>
+                  <NutritionItem 
+                    label="Calories" 
+                    value={foodData.nutritionalData.calories} 
+                    unit="kcal" 
+                    color="#4CAF50"
+                  />
+                  <NutritionItem 
+                    label="Protein" 
+                    value={foodData.nutritionalData.protein} 
+                    unit="g" 
+                    color="#5C6BC0"
+                  />
+                  <NutritionItem 
+                    label="Carbohydrates" 
+                    value={foodData.nutritionalData.carbs} 
+                    unit="g" 
+                    color="#FFA726"
+                  />
+                  <NutritionItem 
+                    label="Fats" 
+                    value={foodData.nutritionalData.fat} 
+                    unit="g" 
+                    color="#EF5350"
+                  />
+                  {foodData.nutritionalData.fiber && (
+                    <NutritionItem 
+                      label="Fiber" 
+                      value={foodData.nutritionalData.fiber} 
+                      unit="g" 
+                      color="#8D6E63"
+                    />
+                  )}
+                  {foodData.nutritionalData.sugar && (
+                    <NutritionItem 
+                      label="Sugar" 
+                      value={foodData.nutritionalData.sugar} 
+                      unit="g" 
+                      color="#EC407A"
+                    />
+                  )}
+                  {foodData.nutritionalData.sodium && (
+                    <NutritionItem 
+                      label="Sodium" 
+                      value={foodData.nutritionalData.sodium} 
+                      unit="mg" 
+                      color="#78909C"
+                    />
+                  )}
+                </View>
+              </View>
+              
+              <TouchableOpacity 
+                style={styles.saveButton}
+                onPress={handleSaveToHistory}
+                disabled={isSaved}
+              >
+                <Text style={styles.saveButtonText}>
+                  {isSaved ? 'Saved to History' : 'Save to History'}
+                </Text>
+              </TouchableOpacity>
+            </Animated.View>
           )}
-          {foodData.isFoodItem && foodData.nutritionalData && (
-            <Button mode="contained" onPress={handleSaveToHistory} style={styles.button}>
-              Save to History
-            </Button>
-          )}
-        </>
+        </ScrollView>
       )}
     </View>
   );
 };
 
-const NutritionItem = ({ label, value, unit }: NutritionItemProps) => (
+const NutritionItem = ({ label, value, unit, color = '#4CAF50' }: NutritionItemProps) => (
   <View style={styles.nutritionItem}>
-    <Paragraph style={styles.label}>{label}</Paragraph>
-    <Paragraph style={styles.value}>{value}{unit}</Paragraph>
+    <View style={styles.nutritionItemHeader}>
+      <Text style={styles.nutritionItemLabel}>{label}</Text>
+      <Text style={[styles.nutritionItemValue, { color }]}>
+        {value}{unit}
+      </Text>
+    </View>
+    <View style={styles.nutritionItemBar}>
+      <View 
+        style={[
+          styles.nutritionItemBarFill, 
+          { 
+            width: `${Math.min(value * 2, 100)}%`,
+            backgroundColor: color,
+          }
+        ]} 
+      />
+    </View>
   </View>
 );
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#FFFFFF',
   },
-  card: {
-    marginBottom: 16,
-    elevation: 4,
-  },
-  nutritionContainer: {
-    marginTop: 8,
-  },
-  noDataText: {
-    color: '#888',
-    fontStyle: 'italic',
-  },
-  button: {
-    marginTop: 16,
-    paddingVertical: 8,
-  },
-  errorContainer: {
-    marginBottom: 16,
-    padding: 16,
-    backgroundColor: '#ffebee',
-    borderRadius: 8,
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-  },
-  errorText: {
-    color: '#c62828',
-    fontWeight: 'bold',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  retryButton: {
-    backgroundColor: '#c62828',
-    paddingHorizontal: 16,
-  },
-  snackbar: {
-    backgroundColor: '#c62828',
-    marginBottom: 16,
+    padding: 24,
+    marginTop: 100,
   },
   loaderContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 24,
   },
   loadingText: {
     marginTop: 16,
+    fontSize: 18,
+    color: '#666666',
+    textAlign: 'center',
+  },
+  errorContainer: {
+    margin: 24,
+    padding: 24,
+    backgroundColor: '#FFEBEE',
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  errorText: {
+    color: '#C62828',
     fontSize: 16,
-    color: '#666',
+    textAlign: 'center',
+    marginTop: 12,
+    marginBottom: 16,
+  },
+  retryButton: {
+    backgroundColor: '#E53935',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  resultContainer: {
+    flex: 1,
+  },
+  imageContainer: {
+    width: '100%',
+    height: 250,
+    position: 'relative',
+  },
+  foodImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  imageGradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 80,
+  },
+  foodNameContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 16,
+  },
+  foodName: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: '700',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  nutritionSummary: {
+    backgroundColor: '#F5F5F5',
+    padding: 16,
+    borderRadius: 16,
+    margin: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  calorieContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  calorieValue: {
+    fontSize: 36,
+    fontWeight: '700',
+    color: '#4CAF50',
+  },
+  calorieLabel: {
+    fontSize: 16,
+    color: '#666666',
+    marginTop: 4,
+  },
+  macroSummary: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+    paddingTop: 16,
+  },
+  macroItem: {
+    alignItems: 'center',
+  },
+  macroValue: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333333',
+  },
+  macroLabel: {
+    fontSize: 14,
+    color: '#666666',
+    marginTop: 4,
+  },
+  descriptionContainer: {
+    padding: 16,
+    marginHorizontal: 16,
+  },
+  descriptionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333333',
+    marginBottom: 8,
+  },
+  descriptionText: {
+    fontSize: 16,
+    color: '#666666',
+    lineHeight: 24,
+  },
+  nutritionDetailContainer: {
+    padding: 16,
+    marginHorizontal: 16,
+    marginBottom: 16,
+  },
+  nutritionDetailTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333333',
+    marginBottom: 16,
+  },
+  nutritionList: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    padding: 16,
+  },
+  nutritionItem: {
+    marginBottom: 16,
+  },
+  nutritionItemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  nutritionItemLabel: {
+    fontSize: 16,
+    color: '#333333',
+  },
+  nutritionItemValue: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  nutritionItemBar: {
+    height: 8,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  nutritionItemBarFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  saveButton: {
+    backgroundColor: '#4CAF50',
+    paddingVertical: 16,
+    borderRadius: 12,
+    margin: 16,
+    alignItems: 'center',
+    shadowColor: '#4CAF50',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  saveButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 16,
+    fontWeight: '700',
+    color: '#333333',
+    marginTop: 16,
+    marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
+    color: '#666666',
     textAlign: 'center',
-    color: '#666',
     marginBottom: 24,
+    paddingHorizontal: 24,
   },
-  nutritionItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+  primaryButton: {
+    backgroundColor: '#4CAF50',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    marginTop: 16,
   },
-  label: {
-    fontWeight: 'bold',
-  },
-  value: {
-    color: '#555',
-  },
-  description: {
-    marginTop: 8,
-    color: '#666',
+  primaryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 
