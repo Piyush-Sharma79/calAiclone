@@ -1,7 +1,7 @@
 # CalAI - AI-Powered Food Recognition App
 ## By Piyush Sharma
 
-A mobile application built for the HealEasy internship assignment that uses AI-powered food recognition to analyze meal photos, display nutritional data, and track dietary habits. The app leverages Google Cloud Vision API for food detection and USDA FoodData Central API for nutritional information, with Supabase as the backend service.
+A mobile application built for the HealEasy that uses AI-powered food recognition to analyze meal photos, display nutritional data, and track dietary habits. The app leverages Google Cloud Vision API for food detection and USDA FoodData Central API for nutritional information, with Supabase as the backend service.
 
 ## 📱 Features
 
@@ -175,7 +175,7 @@ npm run typecheck
 
 ## 📝 Notes for Evaluators
 
-This project was developed as part of the HealEasy internship assignment. Key points to consider:
+This project was developed as part of the assignment. Key points to consider:
 
 - The application demonstrates integration of multiple APIs (Google Cloud Vision, USDA, Supabase)
 - Modern UI/UX principles are implemented throughout the app
@@ -189,4 +189,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 👨‍💻 Author
 
-Built by Piyush Sharma for the HealEasy assignment using Windsurf.
+Built by Piyush Sharma for the HealEasy using Windsurf.
