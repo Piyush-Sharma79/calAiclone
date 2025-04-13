@@ -60,6 +60,7 @@ interface FoodAnalysisResult {
   name: string;
   description: string;
   nutritionalData?: NutritionalData;
+  isFoodItem: boolean;
 }
 
 /**
@@ -161,7 +162,9 @@ export const analyzeFoodImage = async (imageUri: string): Promise<FoodAnalysisRe
 
     // Fetch nutritional data from USDA API if a food item is identified
     let nutritionalData: NutritionalData | undefined;
+    let isFoodItem = false;
     if (usdaQueryName !== 'Unknown Food') {
+      isFoodItem = true;
       try {
         nutritionalData = await fetchNutritionalData(usdaQueryName);
       } catch (error) {
@@ -173,6 +176,7 @@ export const analyzeFoodImage = async (imageUri: string): Promise<FoodAnalysisRe
       name,
       description,
       nutritionalData,
+      isFoodItem
     };
   } catch (error: any) {
     console.error('Error analyzing food image with Google Cloud Vision API:', error);

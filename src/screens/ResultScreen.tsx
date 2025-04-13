@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, Image, ScrollView, Text, Alert } from 'react-native';
-import { Card, Title, Paragraph, Button, ActivityIndicator } from 'react-native-paper';
+import { Card, Title, Paragraph, Button, ActivityIndicator, Snackbar } from 'react-native-paper';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../types/navigation';
 import { supabase } from '../utils/supabase';
@@ -28,10 +28,11 @@ interface NutritionItemProps {
 const ResultScreen = ({ route, navigation }: Props) => {
   const imageUri = route.params?.imageUri;
   const { user } = useAuth();
-  const [foodData, setFoodData] = useState<{ name: string; description: string; nutritionalData?: NutritionalData } | null>(null);
+  const [foodData, setFoodData] = useState<{ name: string; description: string; nutritionalData?: NutritionalData; isFoodItem?: boolean } | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState<boolean>(false);
+  const [snackbarVisible, setSnackbarVisible] = useState<boolean>(false);
 
   useEffect(() => {
     // Reset isSaved when imageUri changes (new image to analyze)
@@ -110,9 +111,25 @@ const ResultScreen = ({ route, navigation }: Props) => {
     // }
   }, [imageUri, user, foodData, isSaved]);
 
+  useEffect(() => {
+    if (error) {
+      setSnackbarVisible(true);
+      const timer = setTimeout(() => {
+        setSnackbarVisible(false);
+        setError(null); // Clear error after dismissal
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
   const handleSaveToHistory = async () => {
     if (!user || !imageUri || !foodData) {
       Alert.alert('Info', 'Data incomplete. Cannot save to history.');
+      return;
+    }
+
+    if (!foodData.isFoodItem || !foodData.nutritionalData) {
+      Alert.alert('Error', 'This does not appear to be a recognizable food item. Cannot save to history.');
       return;
     }
 
@@ -192,40 +209,54 @@ const ResultScreen = ({ route, navigation }: Props) => {
           <Text style={styles.loadingText}>Analyzing your meal...</Text>
         </View>
       )}
-      {!loading && error && (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{error}</Text>
-          <Button mode="outlined" onPress={() => navigation.navigate('Home')} style={styles.retryButton}>
-            Retry
-          </Button>
-        </View>
+      {error && snackbarVisible && (
+        <Snackbar
+          visible={snackbarVisible}
+          onDismiss={() => setSnackbarVisible(false)}
+          style={styles.snackbar}
+          duration={3000}
+        >
+          {error}
+        </Snackbar>
       )}
       {!loading && foodData && (
         <>
-          <Card style={styles.card}>
-            <Card.Cover source={{ uri: imageUri }} />
-            <Card.Content>
-              <Title>{foodData.name}</Title>
-              <Paragraph style={styles.description}>{foodData.description}</Paragraph>
-              {foodData.nutritionalData && (
-                <View style={styles.nutritionContainer}>
-                  <NutritionItem label="Calories" value={foodData.nutritionalData.calories} unit="kcal" />
-                  <NutritionItem label="Protein" value={foodData.nutritionalData.protein} unit="g" />
-                  <NutritionItem label="Carbs" value={foodData.nutritionalData.carbs} unit="g" />
-                  <NutritionItem label="Fats" value={foodData.nutritionalData.fat} unit="g" />
-                  {foodData.nutritionalData.fiber && <NutritionItem label="Fiber" value={foodData.nutritionalData.fiber} unit="g" />}
-                  {foodData.nutritionalData.sugar && <NutritionItem label="Sugar" value={foodData.nutritionalData.sugar} unit="g" />}
-                  {foodData.nutritionalData.sodium && <NutritionItem label="Sodium" value={foodData.nutritionalData.sodium} unit="mg" />}
-                </View>
-              )}
-              {!foodData.nutritionalData && (
-                <Paragraph style={styles.noDataText}>Nutritional data unavailable.</Paragraph>
-              )}
-            </Card.Content>
-          </Card>
-          <Button mode="contained" onPress={handleSaveToHistory} style={styles.button}>
-            Save to History
-          </Button>
+          {(!foodData.isFoodItem || !foodData.nutritionalData) && (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>Error: This does not appear to be a recognizable food item. Please try a different image.</Text>
+              <Button mode="contained" onPress={() => navigation.goBack()} style={styles.retryButton}>
+                Back to Scanning
+              </Button>
+            </View>
+          )}
+          {foodData.isFoodItem && foodData.nutritionalData && (
+            <Card style={styles.card}>
+              <Card.Cover source={{ uri: imageUri }} />
+              <Card.Content>
+                <Title>{foodData.name}</Title>
+                <Paragraph style={styles.description}>{foodData.description}</Paragraph>
+                {foodData.nutritionalData && (
+                  <View style={styles.nutritionContainer}>
+                    <NutritionItem label="Calories" value={foodData.nutritionalData.calories} unit="kcal" />
+                    <NutritionItem label="Protein" value={foodData.nutritionalData.protein} unit="g" />
+                    <NutritionItem label="Carbs" value={foodData.nutritionalData.carbs} unit="g" />
+                    <NutritionItem label="Fats" value={foodData.nutritionalData.fat} unit="g" />
+                    {foodData.nutritionalData.fiber && <NutritionItem label="Fiber" value={foodData.nutritionalData.fiber} unit="g" />}
+                    {foodData.nutritionalData.sugar && <NutritionItem label="Sugar" value={foodData.nutritionalData.sugar} unit="g" />}
+                    {foodData.nutritionalData.sodium && <NutritionItem label="Sodium" value={foodData.nutritionalData.sodium} unit="mg" />}
+                  </View>
+                )}
+                {!foodData.nutritionalData && (
+                  <Paragraph style={styles.noDataText}>Nutritional data unavailable.</Paragraph>
+                )}
+              </Card.Content>
+            </Card>
+          )}
+          {foodData.isFoodItem && foodData.nutritionalData && (
+            <Button mode="contained" onPress={handleSaveToHistory} style={styles.button}>
+              Save to History
+            </Button>
+          )}
         </>
       )}
     </View>
@@ -243,12 +274,65 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
+    backgroundColor: '#f5f5f5',
   },
   card: {
     marginBottom: 16,
+    elevation: 4,
   },
   nutritionContainer: {
+    marginTop: 8,
+  },
+  noDataText: {
+    color: '#888',
+    fontStyle: 'italic',
+  },
+  button: {
     marginTop: 16,
+    paddingVertical: 8,
+  },
+  errorContainer: {
+    marginBottom: 16,
+    padding: 16,
+    backgroundColor: '#ffebee',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  errorText: {
+    color: '#c62828',
+    fontWeight: 'bold',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  retryButton: {
+    backgroundColor: '#c62828',
+    paddingHorizontal: 16,
+  },
+  snackbar: {
+    backgroundColor: '#c62828',
+    marginBottom: 16,
+  },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#666',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    color: '#666',
+    marginBottom: 24,
   },
   nutritionItem: {
     flexDirection: 'row',
@@ -266,50 +350,6 @@ const styles = StyleSheet.create({
   description: {
     marginTop: 8,
     color: '#666',
-  },
-  button: {
-    marginTop: 16,
-  },
-  loaderContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  errorText: {
-    color: 'red',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  retryButton: {
-    marginTop: 16,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    textAlign: 'center',
-    color: '#666',
-    marginBottom: 24,
-  },
-  noDataText: {
-    marginTop: 16,
-    color: '#888',
-    fontStyle: 'italic',
   },
 });
 
