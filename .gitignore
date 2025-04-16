@@ -16,7 +16,7 @@ expo-env.d.ts
 .env.test
 .env.production
 app.json
-
+eas.json
 # Create a template for app.json that doesn't include sensitive keys
 # Add instructions to copy app.template.json to app.json and add your own keys
 
