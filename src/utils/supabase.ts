@@ -5,6 +5,12 @@ import Constants from 'expo-constants';
 const supabaseUrl = process.env.SUPA_PROJECT_URL || Constants.expoConfig?.extra?.SUPA_PROJECT_URL || '';
 const supabaseAnonKey = process.env.SUPA_ANON_KEY || Constants.expoConfig?.extra?.SUPA_ANON_KEY || '';
 
+// Debug info - remove in production
+console.log('Supabase URL source:', 
+  process.env.SUPA_PROJECT_URL ? 'process.env' : 
+  Constants.expoConfig?.extra?.SUPA_PROJECT_URL ? 'Constants.expoConfig' : 
+  'Not found');
+
 // Validate that keys are available
 if (!supabaseUrl || !supabaseAnonKey) {
   console.warn('Supabase credentials not found. Please check your environment variables or app.json configuration.');
