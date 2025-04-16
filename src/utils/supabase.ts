@@ -1,7 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
+import Constants from 'expo-constants';
 
-// Replace these with your Supabase Project URL and Anon Key
-const supabaseUrl = 'https://wgckmallvioqfdcbccfh.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndnY2ttYWxsdmlvcWZkY2JjY2ZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQzOTMwMjQsImV4cCI6MjA1OTk2OTAyNH0.K-hp1ejQy-uOZ_-773Y1GDD4DZSx0dUgB6kC_maVpFU';
+// Get Supabase credentials from environment variables or app config
+const supabaseUrl = process.env.SUPA_PROJECT_URL || Constants.expoConfig?.extra?.SUPA_PROJECT_URL || '';
+const supabaseAnonKey = process.env.SUPA_ANON_KEY || Constants.expoConfig?.extra?.SUPA_ANON_KEY || '';
+
+// Validate that keys are available
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn('Supabase credentials not found. Please check your environment variables or app.json configuration.');
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
