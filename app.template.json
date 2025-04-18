@@ -27,6 +27,8 @@
       "favicon": "./assets/favicon.png"
     },
     "extra": {
+      "GOOGLE_API_KEY": "<YOUR_GOOGLE_API_KEY>",
+      "USDA_API_KEY": "<YOUR_USDA_API_KEY>",
       "eas": {
         "projectId": "<YOUR_EAS_PROJECT_ID>"
       }
