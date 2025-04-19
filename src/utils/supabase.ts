@@ -1,19 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 import Constants from 'expo-constants';
+import { SUPA_PROJECT_URL, SUPA_ANON_KEY } from '@env';
 
 // Get Supabase credentials from environment variables or app config
-const supabaseUrl = process.env.SUPA_PROJECT_URL || Constants.expoConfig?.extra?.SUPA_PROJECT_URL || '';
-const supabaseAnonKey = process.env.SUPA_ANON_KEY || Constants.expoConfig?.extra?.SUPA_ANON_KEY || '';
-
-// Debug info - remove in production
-console.log('Supabase URL source:', 
-  process.env.SUPA_PROJECT_URL ? 'process.env' : 
-  Constants.expoConfig?.extra?.SUPA_PROJECT_URL ? 'Constants.expoConfig' : 
-  'Not found');
-
+const supabaseUrl = SUPA_PROJECT_URL;
+const supabaseAnonKey = SUPA_ANON_KEY;
 // Validate that keys are available
 if (!supabaseUrl || !supabaseAnonKey) {
   console.warn('Supabase credentials not found. Please check your environment variables or app.json configuration.');
 }
-
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);

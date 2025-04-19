@@ -1,14 +1,38 @@
 {
-  "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
     "baseUrl": ".",
     "paths": {
-      "@screens/*": ["src/screens/*"],
-      "@navigation/*": ["src/navigation/*"],
-      "@types/*": ["src/types/*"]
+      "@screens/*": [
+        "src/screens/*"
+      ],
+      "@navigation/*": [
+        "src/navigation/*"
+      ],
+      "@types/*": [
+        "src/types/*"
+      ]
     },
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "typeRoots": [
+      "./node_modules/@types",
+      "./src/types"
+    ],
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "target": "esnext",
+    "lib": [
+      "es2017"
+    ],
+    "allowJs": true,
+    "jsx": "react-native",
+    "noEmit": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true
   },
-  "include": ["src/**/*"]
+  "include": [
+    "src/**/*",
+    "src/types/*.d.ts"
+  ],
+  "extends": "expo/tsconfig.base"
 }
