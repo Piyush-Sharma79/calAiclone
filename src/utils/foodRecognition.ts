@@ -119,13 +119,31 @@ export const analyzeFoodImage = async (imageUri: string): Promise<FoodAnalysisRe
 
     // Function to check if a description is food-related (basic keyword check)
     const isFoodRelated = (desc: string) => {
-      const foodKeywords = ['food', 'dish', 'meal', 'fruit', 'vegetable', 'meat', 'bread', 'pizza', 'burger', 'apple', 'orange', 'banana', 'salad', 'soup', 'cake', 'pie', 'drink', 'beverage'];
+      const foodKeywords = [
+        'sushi', 'croissant', 'fish', 'tuna', 'salmon', 'cod', 'shrimp', 'lobster', 'crab', 'oyster', 'clam', 
+        'orange', 'pineapple', 'apple', 'banana', 'grape', 'watermelon', 'kiwi', 'mango', 'papaya', 'peach', 
+        'pear', 'plum', 'cherry', 'strawberry', 'blueberry', 'raspberry', 'blackberry', 'coconut', 'avocado', 
+        'broccoli', 'carrot', 'spinach', 'kale', 'lettuce', 'cucumber', 'zucchini', 'eggplant', 'pepper', 
+        'tomato', 'potato', 'onion', 'garlic', 'ginger', 'mushroom', 'pumpkin', 'squash', 'corn', 'peas', 
+        'chicken', 'beef', 'pork', 'lamb', 'duck', 'turkey', 'bacon', 'sausage', 'hotdog', 'steak', 'ham', 
+        'pizza', 'burger', 'sandwich', 'taco', 'burrito', 'quesadilla', 'pasta', 'spaghetti', 'lasagna', 
+        'ravioli', 'noodles', 'soup', 'stew', 'chowder', 'salad', 'cake', 'pie', 'cookie', 'brownie', 
+        'donut', 'muffin', 'pancake', 'waffle', 'croissant', 'bagel', 'toast', 'cheese', 'yogurt', 'milk', 
+        'ice cream', 'chocolate', 'candy', 'honey', 'jam', 'jelly', 'syrup', 'tea', 'coffee', 'juice', 
+        'smoothie', 'soda', 'beer', 'wine', 'whiskey', 'cocktail',
+        'hotdog', 'sushi', 'fish', 'tuna', 'orange', 'pineapple',
+        'paneer', 'dal', 'samosa', 'pakora', 'biryani', 'naan', 'roti', 'paratha', 'chapati', 'idli', 
+        'dosa', 'uttapam', 'poha', 'upma', 'chole', 'rajma', 'kadhi', 'sabzi', 'aloo', 'gobi', 'bhindi', 
+        'baingan', 'kheer', 'gulab jamun', 'jalebi', 'laddu', 'halwa', 'pulao', 'khichdi', 'rasgulla', 
+        'malai kofta', 'palak paneer', 'matar paneer', 'veg curry', 'veg biryani', 'veg pulao', 'tikka', 
+        'chaat', 'pani puri', 'bhel puri', 'sev puri', 'dahi puri', 'vada pav', 'misal pav', 'pav bhaji'
+      ];
       return foodKeywords.some(keyword => desc.toLowerCase().includes(keyword));
     };
 
     // Function to check if a description is a generic category
     const isGenericCategory = (desc: string) => {
-      const genericCategories = ['food', 'dish', 'meal', 'fruit', 'vegetable', 'meat', 'bread', 'drink', 'beverage', 'produce', 'plant', 'cuisine'];
+      const genericCategories = ['food','staple food', 'dish', 'meal', 'fruit', 'vegetable', 'meat', 'bread', 'drink', 'beverage', 'produce', 'plant', 'cuisine'];
       return genericCategories.includes(desc.toLowerCase());
     };
 
